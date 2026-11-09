@@ -15,7 +15,7 @@ use Psr\Http\Message\StreamInterface;
  */
 class Stream implements StreamInterface
 {
-    use StreamTrait;
+    use Stream_Trait;
 
     /** @var resource|null A resource reference */
     private $stream;
@@ -82,7 +82,7 @@ class Stream implements StreamInterface
 
         if (\is_string($body)) {
             if (200000 <= \strlen($body)) {
-                $body = self::openZvalStream($body);
+                $body = self::open_zval_stream($body);
             } else {
                 $resource = \fopen('php://memory', 'r+');
                 \fwrite($resource, $body);
@@ -130,7 +130,7 @@ class Stream implements StreamInterface
         return $result;
     }
 
-    private function getUri()
+    private function get_uri()
     {
         if (false !== $this->uri) {
             $this->uri = $this->getMetadata('uri') ?? false;
@@ -150,7 +150,7 @@ class Stream implements StreamInterface
         }
 
         // Clear the stat cache if the stream has a URI
-        if ($uri = $this->getUri()) {
+        if ($uri = $this->get_uri()) {
             \clearstatcache(true, $uri);
         }
 
@@ -297,7 +297,7 @@ class Stream implements StreamInterface
         return $meta[$key] ?? null;
     }
 
-    private static function openZvalStream(string $body)
+    private static function open_zval_stream(string $body)
     {
         static $wrapper;
 

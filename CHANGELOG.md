@@ -12,7 +12,7 @@ All notable changes to this project will be documented in this file, in reverse 
 
 ## 1.8.0
 
-- Deprecate HttplugFactory, use Psr17Factory instead
+- Deprecate Httplug_Factory, use Psr17_Factory instead
 - Make depencendy on php-http/message-factory optional
 
 ## 1.7.0
@@ -30,7 +30,7 @@ All notable changes to this project will be documented in this file, in reverse 
 ### Changed
 
 - Seek to the begining of the string when using Stream::create()
-- Populate ServerRequest::getQueryParams() on instantiation
+- Populate Server_Request::getQueryParams() on instantiation
 - Encode [reserved characters](https://www.rfc-editor.org/rfc/rfc3986#appendix-A) in userinfo in Uri
 - Normalize leading slashes for Uri::getPath()
 - Make Stream's constructor public
@@ -47,7 +47,7 @@ All notable changes to this project will be documented in this file, in reverse 
 ### Added
 
 - Add explicit `@return mixed`
-- Add explicit return types to HttplugFactory
+- Add explicit return types to Httplug_Factory
 
 ### Fixed
 
@@ -57,8 +57,8 @@ All notable changes to this project will be documented in this file, in reverse 
 
 ### Fixed
 
-- `Psr17Factory::createStreamFromFile`, `UploadedFile::moveTo`, and
-  `UploadedFile::getStream` no longer throw `ValueError` in PHP 8.
+- `Psr17_Factory::createStreamFromFile`, `Uploaded_File::moveTo`, and
+  `Uploaded_File::getStream` no longer throw `ValueError` in PHP 8.
 
 ## 1.4.0
 
@@ -101,7 +101,7 @@ The `final` keyword was replaced by `@final` annotation.
 ### Changed
 
 - Change minimal port number to 0 (unix socket)
-- Updated `Psr17Factory::createResponse` to respect the specification. If second
+- Updated `Psr17_Factory::createResponse` to respect the specification. If second
   argument is not used, a standard reason phrase. If an empty string is passed,
   then the reason phrase will be empty.
 
@@ -115,7 +115,7 @@ The `final` keyword was replaced by `@final` annotation.
 ### Added
 
 - Improved performance
-- More tests for `UploadedFile` and `HttplugFactory`
+- More tests for `Uploaded_File` and `Httplug_Factory`
 
 ### Removed
 
@@ -134,24 +134,24 @@ The `final` keyword was replaced by `@final` annotation.
 
 ### Added
 
-- Support for final PSR-17 (HTTP factories). (`Psr17Factory`)
+- Support for final PSR-17 (HTTP factories). (`Psr17_Factory`)
 - Support for numeric header values.
 - Support for empty header values.
 - All classes are final
-- `HttplugFactory` that implements factory interfaces from HTTPlug.
+- `Httplug_Factory` that implements factory interfaces from HTTPlug.
 
 ### Changed
 
-- `ServerRequest` does not extend `Request`.
+- `Server_Request` does not extend `Request`.
 
 ### Removed
 
 - The HTTPlug discovery strategy was removed since it is included in php-http/discovery 1.4.
-- `UploadedFileFactory()` was removed in favor for `Psr17Factory`.
-- `ServerRequestFactory()` was removed in favor for `Psr17Factory`.
-- `StreamFactory`, `UriFactory`, abd `MessageFactory`. Use `HttplugFactory` instead.
-- `ServerRequestFactory::createServerRequestFromArray`, `ServerRequestFactory::createServerRequestFromArrays` and
-  `ServerRequestFactory::createServerRequestFromGlobals`. Please use the new `nyholm/psr7-server` instead.
+- `Uploaded_FileFactory()` was removed in favor for `Psr17_Factory`.
+- `Server_RequestFactory()` was removed in favor for `Psr17_Factory`.
+- `StreamFactory`, `UriFactory`, abd `MessageFactory`. Use `Httplug_Factory` instead.
+- `Server_RequestFactory::createServerRequestFromArray`, `Server_RequestFactory::createServerRequestFromArrays` and
+  `Server_RequestFactory::createServerRequestFromGlobals`. Please use the new `nyholm/psr7-server` instead.
 
 ## 0.3.0
 
@@ -159,13 +159,13 @@ The `final` keyword was replaced by `@final` annotation.
 
 - Return types.
 - Many `InvalidArgumentException`s are thrown when you use invalid arguments.
-- Integration tests for `UploadedFile` and `ServerRequest`.
+- Integration tests for `Uploaded_File` and `Server_Request`.
 
 ### Changed
 
 - We dropped PHP7.0 support.
 - PSR-17 factories have been marked as internal. They do not fall under our BC promise until PSR-17 is accepted.
-- `UploadedFileFactory::createUploadedFile` does not accept a string file path.
+- `Uploaded_FileFactory::createUploadedFile` does not accept a string file path.
 
 ## 0.2.3
 

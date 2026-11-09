@@ -10,22 +10,22 @@ use Psr\Http\Message\StreamInterface;
 /**
  * @covers \Nyholm\Psr7\Request
  */
-class RequestTest extends TestCase
+class Request_Test extends TestCase
 {
-    public function testRequestUriMayBeString()
+    public function test_request_uri_may_be_string()
     {
         $r = new Request('GET', '/');
         $this->assertEquals('/', (string) $r->getUri());
     }
 
-    public function testRequestUriMayBeUri()
+    public function test_request_uri_may_be_uri()
     {
         $uri = new Uri('/');
         $r = new Request('GET', $uri);
         $this->assertSame($uri, $r->getUri());
     }
 
-    public function testValidateRequestUri()
+    public function test_validate_request_uri()
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Unable to parse URI: "///"');
@@ -33,28 +33,28 @@ class RequestTest extends TestCase
         new Request('GET', '///');
     }
 
-    public function testCanConstructWithBody()
+    public function test_can_construct_with_body()
     {
         $r = new Request('GET', '/', [], 'baz');
         $this->assertInstanceOf(StreamInterface::class, $r->getBody());
         $this->assertEquals('baz', (string) $r->getBody());
     }
 
-    public function testNullBody()
+    public function test_null_body()
     {
         $r = new Request('GET', '/', [], null);
         $this->assertInstanceOf(StreamInterface::class, $r->getBody());
         $this->assertSame('', (string) $r->getBody());
     }
 
-    public function testFalseyBody()
+    public function test_falsey_body()
     {
         $r = new Request('GET', '/', [], '0');
         $this->assertInstanceOf(StreamInterface::class, $r->getBody());
         $this->assertSame('0', (string) $r->getBody());
     }
 
-    public function testConstructorDoesNotReadStreamBody()
+    public function test_constructor_does_not_read_stream_body()
     {
         $body = $this->getMockBuilder(StreamInterface::class)->getMock();
         $body->expects($this->never())
@@ -64,7 +64,7 @@ class RequestTest extends TestCase
         $this->assertSame($body, $r->getBody());
     }
 
-    public function testWithUri()
+    public function test_with_uri()
     {
         $r1 = new Request('GET', '/');
         $u1 = $r1->getUri();
@@ -84,14 +84,14 @@ class RequestTest extends TestCase
         $this->assertNotSame($r3, $r5);
     }
 
-    public function testSameInstanceWhenSameUri()
+    public function test_same_instance_when_same_uri()
     {
         $r1 = new Request('GET', 'http://foo.com');
         $r2 = $r1->withUri($r1->getUri());
         $this->assertSame($r1, $r2);
     }
 
-    public function testWithRequestTarget()
+    public function test_with_request_target()
     {
         $r1 = new Request('GET', '/');
         $r2 = $r1->withRequestTarget('*');
@@ -99,14 +99,14 @@ class RequestTest extends TestCase
         $this->assertEquals('/', $r1->getRequestTarget());
     }
 
-    public function testWithInvalidRequestTarget()
+    public function test_with_invalid_request_target()
     {
         $r = new Request('GET', '/');
         $this->expectException(\InvalidArgumentException::class);
         $r->withRequestTarget('foo bar');
     }
 
-    public function testGetRequestTarget()
+    public function test_get_request_target()
     {
         $r = new Request('GET', 'https://nyholm.tech');
         $this->assertEquals('/', $r->getRequestTarget());
@@ -118,7 +118,7 @@ class RequestTest extends TestCase
         $this->assertEquals('/?bar=baz', $r->getRequestTarget());
     }
 
-    public function testRequestTargetDoesNotAllowSpaces()
+    public function test_request_target_does_not_allow_spaces()
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Invalid request target provided; cannot contain whitespace');
@@ -127,7 +127,7 @@ class RequestTest extends TestCase
         $r1->withRequestTarget('/foo bar');
     }
 
-    public function testRequestTargetDefaultsToSlash()
+    public function test_request_target_defaults_to_slash()
     {
         $r1 = new Request('GET', '');
         $this->assertEquals('/', $r1->getRequestTarget());
@@ -137,19 +137,19 @@ class RequestTest extends TestCase
         $this->assertEquals('/bar%20baz/', $r3->getRequestTarget());
     }
 
-    public function testBuildsRequestTarget()
+    public function test_builds_request_target()
     {
         $r1 = new Request('GET', 'http://foo.com/baz?bar=bam');
         $this->assertEquals('/baz?bar=bam', $r1->getRequestTarget());
     }
 
-    public function testBuildsRequestTargetWithFalseyQuery()
+    public function test_builds_request_target_with_falsey_query()
     {
         $r1 = new Request('GET', 'http://foo.com/baz?0');
         $this->assertEquals('/baz?0', $r1->getRequestTarget());
     }
 
-    public function testHostIsAddedFirst()
+    public function test_host_is_added_first()
     {
         $r = new Request('GET', 'http://foo.com/baz?bar=bam', ['Foo' => 'Bar']);
         $this->assertEquals([
@@ -158,7 +158,7 @@ class RequestTest extends TestCase
         ], $r->getHeaders());
     }
 
-    public function testCanGetHeaderAsCsv()
+    public function test_can_get_header_as_csv()
     {
         $r = new Request('GET', 'http://foo.com/baz?bar=bam', [
             'Foo' => ['a', 'b', 'c'],
@@ -167,7 +167,7 @@ class RequestTest extends TestCase
         $this->assertEquals('', $r->getHeaderLine('Bar'));
     }
 
-    public function testHostIsNotOverwrittenWhenPreservingHost()
+    public function test_host_is_not_overwritten_when_preserving_host()
     {
         $r = new Request('GET', 'http://foo.com/baz?bar=bam', ['Host' => 'a.com']);
         $this->assertEquals(['Host' => ['a.com']], $r->getHeaders());
@@ -175,7 +175,7 @@ class RequestTest extends TestCase
         $this->assertEquals('a.com', $r2->getHeaderLine('Host'));
     }
 
-    public function testOverridesHostWithUri()
+    public function test_overrides_host_with_uri()
     {
         $r = new Request('GET', 'http://foo.com/baz?bar=bam');
         $this->assertEquals(['Host' => ['foo.com']], $r->getHeaders());
@@ -183,7 +183,7 @@ class RequestTest extends TestCase
         $this->assertEquals('www.baz.com', $r2->getHeaderLine('Host'));
     }
 
-    public function testAggregatesHeaders()
+    public function test_aggregates_headers()
     {
         $r = new Request('GET', '', [
             'ZOO' => 'zoobar',
@@ -193,7 +193,7 @@ class RequestTest extends TestCase
         $this->assertEquals('zoobar, foobar, zoobar', $r->getHeaderLine('zoo'));
     }
 
-    public function testSupportNumericHeaders()
+    public function test_support_numeric_headers()
     {
         $r = new Request('GET', '', [
             'Content-Length' => 200,
@@ -202,7 +202,7 @@ class RequestTest extends TestCase
         $this->assertSame('200', $r->getHeaderLine('Content-Length'));
     }
 
-    public function testSupportNumericHeaderNames()
+    public function test_support_numeric_header_names()
     {
         $r = new Request(
             'GET', '', [
@@ -247,20 +247,20 @@ class RequestTest extends TestCase
         );
     }
 
-    public function testAddsPortToHeader()
+    public function test_adds_port_to_header()
     {
         $r = new Request('GET', 'http://foo.com:8124/bar');
         $this->assertEquals('foo.com:8124', $r->getHeaderLine('host'));
     }
 
-    public function testAddsPortToHeaderAndReplacePreviousPort()
+    public function test_adds_port_to_header_and_replace_previous_port()
     {
         $r = new Request('GET', 'http://foo.com:8124/bar');
         $r = $r->withUri(new Uri('http://foo.com:8125/bar'));
         $this->assertEquals('foo.com:8125', $r->getHeaderLine('host'));
     }
 
-    public function testCannotHaveHeaderWithEmptyName()
+    public function test_cannot_have_header_with_empty_name()
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Header name must be an RFC 7230 compatible string');
@@ -268,14 +268,14 @@ class RequestTest extends TestCase
         $r->withHeader('', 'Bar');
     }
 
-    public function testCanHaveHeaderWithEmptyValue()
+    public function test_can_have_header_with_empty_value()
     {
         $r = new Request('GET', 'https://example.com/');
         $r = $r->withHeader('Foo', '');
         $this->assertEquals([''], $r->getHeader('Foo'));
     }
 
-    public function testUpdateHostFromUri()
+    public function test_update_host_from_uri()
     {
         $request = new Request('GET', '/');
         $request = $request->withUri(new Uri('https://nyholm.tech'));
@@ -296,9 +296,9 @@ class RequestTest extends TestCase
     }
 
     /**
-     * @dataProvider provideHeaderValuesContainingNotAllowedChars
+     * @dataProvider provide_header_values_containing_not_allowed_chars
      */
-    public function testCannotHaveHeaderWithInvalidValue(string $name)
+    public function test_cannot_have_header_with_invalid_value(string $name)
     {
         $this->expectException(\InvalidArgumentException::class);
         $this->expectExceptionMessage('Header name must be an RFC 7230 compatible string');
@@ -306,7 +306,7 @@ class RequestTest extends TestCase
         $r->withHeader($name, 'Bar');
     }
 
-    public static function provideHeaderValuesContainingNotAllowedChars(): array
+    public static function provide_header_values_containing_not_allowed_chars(): array
     {
         // Explicit tests for newlines as the most common exploit vector.
         $tests = [

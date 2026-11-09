@@ -10,9 +10,9 @@ use Symfony\Component\ErrorHandler\ErrorHandler as SymfonyErrorHandler;
 /**
  * @covers \Nyholm\Psr7\Stream
  */
-class StreamTest extends TestCase
+class Stream_Test extends TestCase
 {
-    public function testConstructorInitializesProperties()
+    public function test_constructor_initializes_properties()
     {
         $handle = \fopen('php://temp', 'r+');
         \fwrite($handle, 'data');
@@ -27,7 +27,7 @@ class StreamTest extends TestCase
         $stream->close();
     }
 
-    public function testConstructorSeekWithStringContent()
+    public function test_constructor_seek_with_string_content()
     {
         $content = \str_repeat('Hello', 50000);
         $stream = Stream::create($content);
@@ -46,7 +46,7 @@ class StreamTest extends TestCase
         $this->assertSame('Hello', $stream->getContents());
     }
 
-    public function testStreamClosesHandleOnDestruct()
+    public function test_stream_closes_handle_on_destruct()
     {
         $handle = \fopen('php://temp', 'r');
         $stream = Stream::create($handle);
@@ -54,7 +54,7 @@ class StreamTest extends TestCase
         $this->assertFalse(\is_resource($handle));
     }
 
-    public function testConvertsToString()
+    public function test_converts_to_string()
     {
         $handle = \fopen('php://temp', 'w+');
         \fwrite($handle, 'data');
@@ -64,7 +64,7 @@ class StreamTest extends TestCase
         $stream->close();
     }
 
-    public function testBuildFromString()
+    public function test_build_from_string()
     {
         $stream = Stream::create('data');
         $this->assertEquals('data', $stream->getContents());
@@ -72,7 +72,7 @@ class StreamTest extends TestCase
         $stream->close();
     }
 
-    public function testGetsContents()
+    public function test_gets_contents()
     {
         $handle = \fopen('php://temp', 'w+');
         \fwrite($handle, 'data');
@@ -83,7 +83,7 @@ class StreamTest extends TestCase
         $this->assertEquals('', $stream->getContents());
     }
 
-    public function testChecksEof()
+    public function test_checks_eof()
     {
         $handle = \fopen('php://temp', 'w+');
         \fwrite($handle, 'data');
@@ -94,7 +94,7 @@ class StreamTest extends TestCase
         $stream->close();
     }
 
-    public function testGetSize()
+    public function test_get_size()
     {
         $size = \filesize(__FILE__);
         $handle = \fopen(__FILE__, 'r');
@@ -105,7 +105,7 @@ class StreamTest extends TestCase
         $stream->close();
     }
 
-    public function testEnsuresSizeIsConsistent()
+    public function test_ensures_size_is_consistent()
     {
         $h = \fopen('php://temp', 'w+');
         $this->assertEquals(3, \fwrite($h, 'foo'));
@@ -117,7 +117,7 @@ class StreamTest extends TestCase
         $stream->close();
     }
 
-    public function testProvidesStreamPosition()
+    public function test_provides_stream_position()
     {
         $handle = \fopen('php://temp', 'w+');
         $stream = Stream::create($handle);
@@ -130,7 +130,7 @@ class StreamTest extends TestCase
         $stream->close();
     }
 
-    public function testCanDetachStream()
+    public function test_can_detach_stream()
     {
         $r = \fopen('php://temp', 'w+');
         $stream = Stream::create($r);
@@ -191,7 +191,7 @@ class StreamTest extends TestCase
         $stream->close();
     }
 
-    public function testCloseClearProperties()
+    public function test_close_clear_properties()
     {
         $handle = \fopen('php://temp', 'r+');
         $stream = Stream::create($handle);
@@ -204,9 +204,9 @@ class StreamTest extends TestCase
         $this->assertEmpty($stream->getMetadata());
     }
 
-    public function testUnseekableStreamWrapper()
+    public function test_unseekable_stream_wrapper()
     {
-        \stream_wrapper_register('nyholm-psr7-test', TestStreamWrapper::class);
+        \stream_wrapper_register('nyholm-psr7-test', Test_Stream_Wrapper::class);
         $handle = \fopen('nyholm-psr7-test://', 'r');
         \stream_wrapper_unregister('nyholm-psr7-test');
 
@@ -215,7 +215,7 @@ class StreamTest extends TestCase
     }
 }
 
-class TestStreamWrapper
+class Test_Stream_Wrapper
 {
     public $context;
 

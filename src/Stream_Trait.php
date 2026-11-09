@@ -12,7 +12,7 @@ if (\PHP_VERSION_ID >= 70400 || (new \ReflectionMethod(StreamInterface::class, '
     /**
      * @internal
      */
-    trait StreamTrait
+    trait Stream_Trait
     {
         public function __toString(): string
         {
@@ -27,7 +27,7 @@ if (\PHP_VERSION_ID >= 70400 || (new \ReflectionMethod(StreamInterface::class, '
     /**
      * @internal
      */
-    trait StreamTrait
+    trait Stream_Trait
     {
         /**
          * @return string
@@ -41,12 +41,12 @@ if (\PHP_VERSION_ID >= 70400 || (new \ReflectionMethod(StreamInterface::class, '
 
                 return $this->getContents();
             } catch (\Throwable $e) {
-                if (\is_array($errorHandler = \set_error_handler('var_dump'))) {
-                    $errorHandler = $errorHandler[0] ?? null;
+                if (\is_array($error_handler = \set_error_handler('var_dump'))) {
+                    $error_handler = $error_handler[0] ?? null;
                 }
                 \restore_error_handler();
 
-                if ($e instanceof \Error || $errorHandler instanceof SymfonyErrorHandler || $errorHandler instanceof SymfonyLegacyErrorHandler) {
+                if ($e instanceof \Error || $error_handler instanceof SymfonyErrorHandler || $error_handler instanceof SymfonyLegacyErrorHandler) {
                     return \trigger_error((string) $e, \E_USER_ERROR);
                 }
 

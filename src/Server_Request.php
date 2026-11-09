@@ -13,28 +13,28 @@ use Psr\Http\Message\{ServerRequestInterface, StreamInterface, UploadedFileInter
  *
  * @final This class should never be extended. See https://github.com/Nyholm/psr7/blob/master/doc/final.md
  */
-class ServerRequest implements ServerRequestInterface
+class Server_Request implements ServerRequestInterface
 {
-    use MessageTrait;
-    use RequestTrait;
+    use Message_Trait;
+    use Request_Trait;
 
     /** @var array */
     private $attributes = [];
 
     /** @var array */
-    private $cookieParams = [];
+    private $cookie_params = [];
 
     /** @var array|object|null */
-    private $parsedBody;
+    private $parsed_body;
 
     /** @var array */
-    private $queryParams = [];
+    private $query_params = [];
 
     /** @var array */
-    private $serverParams;
+    private $server_params;
 
     /** @var UploadedFileInterface[] */
-    private $uploadedFiles = [];
+    private $uploaded_files = [];
 
     /**
      * @param string $method HTTP method
@@ -42,11 +42,11 @@ class ServerRequest implements ServerRequestInterface
      * @param array $headers Request headers
      * @param string|resource|StreamInterface|null $body Request body
      * @param string $version Protocol version
-     * @param array $serverParams Typically the $_SERVER superglobal
+     * @param array $server_params Typically the $_SERVER superglobal
      */
-    public function __construct(string $method, $uri, array $headers = [], $body = null, string $version = '1.1', array $serverParams = [])
+    public function __construct(string $method, $uri, array $headers = [], $body = null, string $version = '1.1', array $server_params = [])
     {
-        $this->serverParams = $serverParams;
+        $this->server_params = $server_params;
 
         if (!($uri instanceof UriInterface)) {
             $uri = new Uri($uri);
@@ -54,15 +54,15 @@ class ServerRequest implements ServerRequestInterface
 
         $this->method = $method;
         $this->uri = $uri;
-        $this->setHeaders($headers);
+        $this->set_headers($headers);
         $this->protocol = $version;
-        \parse_str($uri->getQuery(), $this->queryParams);
+        \parse_str($uri->getQuery(), $this->query_params);
 
         if (!$this->hasHeader('Host')) {
-            $this->updateHostFromUri();
+            $this->update_host_from_uri();
         }
 
-        // If we got no body, defer initialization of the stream until ServerRequest::getBody()
+        // If we got no body, defer initialization of the stream until Server_Request::getBody()
         if ('' !== $body && null !== $body) {
             $this->stream = Stream::create($body);
         }
@@ -70,12 +70,12 @@ class ServerRequest implements ServerRequestInterface
 
     public function getServerParams(): array
     {
-        return $this->serverParams;
+        return $this->server_params;
     }
 
     public function getUploadedFiles(): array
     {
-        return $this->uploadedFiles;
+        return $this->uploaded_files;
     }
 
     /**
@@ -84,14 +84,14 @@ class ServerRequest implements ServerRequestInterface
     public function withUploadedFiles(array $uploadedFiles): ServerRequestInterface
     {
         $new = clone $this;
-        $new->uploadedFiles = $uploadedFiles;
+        $new->uploaded_files = $uploadedFiles;
 
         return $new;
     }
 
     public function getCookieParams(): array
     {
-        return $this->cookieParams;
+        return $this->cookie_params;
     }
 
     /**
@@ -100,14 +100,14 @@ class ServerRequest implements ServerRequestInterface
     public function withCookieParams(array $cookies): ServerRequestInterface
     {
         $new = clone $this;
-        $new->cookieParams = $cookies;
+        $new->cookie_params = $cookies;
 
         return $new;
     }
 
     public function getQueryParams(): array
     {
-        return $this->queryParams;
+        return $this->query_params;
     }
 
     /**
@@ -116,7 +116,7 @@ class ServerRequest implements ServerRequestInterface
     public function withQueryParams(array $query): ServerRequestInterface
     {
         $new = clone $this;
-        $new->queryParams = $query;
+        $new->query_params = $query;
 
         return $new;
     }
@@ -126,7 +126,7 @@ class ServerRequest implements ServerRequestInterface
      */
     public function getParsedBody()
     {
-        return $this->parsedBody;
+        return $this->parsed_body;
     }
 
     /**
@@ -139,7 +139,7 @@ class ServerRequest implements ServerRequestInterface
         }
 
         $new = clone $this;
-        $new->parsedBody = $data;
+        $new->parsed_body = $data;
 
         return $new;
     }

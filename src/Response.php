@@ -15,7 +15,7 @@ use Psr\Http\Message\{ResponseInterface, StreamInterface};
  */
 class Response implements ResponseInterface
 {
-    use MessageTrait;
+    use Message_Trait;
 
     /** @var array Map of standard HTTP status code/reason phrases */
     private const PHRASES = [
@@ -27,10 +27,10 @@ class Response implements ResponseInterface
     ];
 
     /** @var string */
-    private $reasonPhrase = '';
+    private $reason_phrase = '';
 
     /** @var int */
-    private $statusCode;
+    private $status_code;
 
     /**
      * @param int $status Status code
@@ -46,12 +46,12 @@ class Response implements ResponseInterface
             $this->stream = Stream::create($body);
         }
 
-        $this->statusCode = $status;
-        $this->setHeaders($headers);
-        if (null === $reason && isset(self::PHRASES[$this->statusCode])) {
-            $this->reasonPhrase = self::PHRASES[$status];
+        $this->status_code = $status;
+        $this->set_headers($headers);
+        if (null === $reason && isset(self::PHRASES[$this->status_code])) {
+            $this->reason_phrase = self::PHRASES[$status];
         } else {
-            $this->reasonPhrase = $reason ?? '';
+            $this->reason_phrase = $reason ?? '';
         }
 
         $this->protocol = $version;
@@ -59,12 +59,12 @@ class Response implements ResponseInterface
 
     public function getStatusCode(): int
     {
-        return $this->statusCode;
+        return $this->status_code;
     }
 
     public function getReasonPhrase(): string
     {
-        return $this->reasonPhrase;
+        return $this->reason_phrase;
     }
 
     /**
@@ -82,11 +82,11 @@ class Response implements ResponseInterface
         }
 
         $new = clone $this;
-        $new->statusCode = $code;
-        if ((null === $reasonPhrase || '' === $reasonPhrase) && isset(self::PHRASES[$new->statusCode])) {
-            $reasonPhrase = self::PHRASES[$new->statusCode];
+        $new->status_code = $code;
+        if ((null === $reasonPhrase || '' === $reasonPhrase) && isset(self::PHRASES[$new->status_code])) {
+            $reasonPhrase = self::PHRASES[$new->status_code];
         }
-        $new->reasonPhrase = $reasonPhrase;
+        $new->reason_phrase = $reasonPhrase;
 
         return $new;
     }

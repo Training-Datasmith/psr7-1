@@ -16,13 +16,13 @@ use Psr\Http\Message\StreamInterface;
  *
  * @internal should not be used outside of Nyholm/Psr7 as it does not fall under our BC promise
  */
-trait MessageTrait
+trait Message_Trait
 {
     /** @var array Map of all registered headers, as original name => array of values */
     private $headers = [];
 
     /** @var array Map of lowercase header name => original name at registration */
-    private $headerNames = [];
+    private $header_names = [];
 
     /** @var string */
     private $protocol = '1.1';
@@ -61,7 +61,7 @@ trait MessageTrait
 
     public function hasHeader($header): bool
     {
-        return isset($this->headerNames[\strtr($header, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')]);
+        return isset($this->header_names[\strtr($header, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz')]);
     }
 
     public function getHeader($header): array
@@ -71,11 +71,11 @@ trait MessageTrait
         }
 
         $header = \strtr($header, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz');
-        if (!isset($this->headerNames[$header])) {
+        if (!isset($this->header_names[$header])) {
             return [];
         }
 
-        $header = $this->headerNames[$header];
+        $header = $this->header_names[$header];
 
         return $this->headers[$header];
     }
@@ -90,14 +90,14 @@ trait MessageTrait
      */
     public function withHeader($header, $value): MessageInterface
     {
-        $value = $this->validateAndTrimHeader($header, $value);
+        $value = $this->validate_and_trim_header($header, $value);
         $normalized = \strtr($header, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz');
 
         $new = clone $this;
-        if (isset($new->headerNames[$normalized])) {
-            unset($new->headers[$new->headerNames[$normalized]]);
+        if (isset($new->header_names[$normalized])) {
+            unset($new->headers[$new->header_names[$normalized]]);
         }
-        $new->headerNames[$normalized] = $header;
+        $new->header_names[$normalized] = $header;
         $new->headers[$header] = $value;
 
         return $new;
@@ -113,7 +113,7 @@ trait MessageTrait
         }
 
         $new = clone $this;
-        $new->setHeaders([$header => $value]);
+        $new->set_headers([$header => $value]);
 
         return $new;
     }
@@ -128,13 +128,13 @@ trait MessageTrait
         }
 
         $normalized = \strtr($header, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz');
-        if (!isset($this->headerNames[$normalized])) {
+        if (!isset($this->header_names[$normalized])) {
             return $this;
         }
 
-        $header = $this->headerNames[$normalized];
+        $header = $this->header_names[$normalized];
         $new = clone $this;
-        unset($new->headers[$header], $new->headerNames[$normalized]);
+        unset($new->headers[$header], $new->header_names[$normalized]);
 
         return $new;
     }
@@ -163,7 +163,7 @@ trait MessageTrait
         return $new;
     }
 
-    private function setHeaders(array $headers): void
+    private function set_headers(array $headers): void
     {
         foreach ($headers as $header => $value) {
             if (\is_int($header)) {
@@ -171,13 +171,13 @@ trait MessageTrait
                 // We must cast it back to a string in order to comply with validation.
                 $header = (string) $header;
             }
-            $value = $this->validateAndTrimHeader($header, $value);
+            $value = $this->validate_and_trim_header($header, $value);
             $normalized = \strtr($header, 'ABCDEFGHIJKLMNOPQRSTUVWXYZ', 'abcdefghijklmnopqrstuvwxyz');
-            if (isset($this->headerNames[$normalized])) {
-                $header = $this->headerNames[$normalized];
+            if (isset($this->header_names[$normalized])) {
+                $header = $this->header_names[$normalized];
                 $this->headers[$header] = \array_merge($this->headers[$header], $value);
             } else {
-                $this->headerNames[$normalized] = $header;
+                $this->header_names[$normalized] = $header;
                 $this->headers[$header] = $value;
             }
         }
@@ -201,7 +201,7 @@ trait MessageTrait
      *
      * @see https://tools.ietf.org/html/rfc7230#section-3.2.4
      */
-    private function validateAndTrimHeader($header, $values): array
+    private function validate_and_trim_header($header, $values): array
     {
         if (!\is_string($header) || 1 !== \preg_match("@^[!#$%&'*+.^_`|~0-9A-Za-z-]+$@D", $header)) {
             throw new \InvalidArgumentException('Header name must be an RFC 7230 compatible string');
@@ -221,15 +221,15 @@ trait MessageTrait
         }
 
         // Assert Non empty array
-        $returnValues = [];
+        $return_values = [];
         foreach ($values as $v) {
             if ((!\is_numeric($v) && !\is_string($v)) || 1 !== \preg_match("@^[ \t\x21-\x7E\x80-\xFF]*$@D", (string) $v)) {
                 throw new \InvalidArgumentException('Header values must be RFC 7230 compatible strings');
             }
 
-            $returnValues[] = \trim((string) $v, " \t");
+            $return_values[] = \trim((string) $v, " \t");
         }
 
-        return $returnValues;
+        return $return_values;
     }
 }

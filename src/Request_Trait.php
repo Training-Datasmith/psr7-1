@@ -14,21 +14,21 @@ use Psr\Http\Message\UriInterface;
  *
  * @internal should not be used outside of Nyholm/Psr7 as it does not fall under our BC promise
  */
-trait RequestTrait
+trait Request_Trait
 {
     /** @var string */
     private $method;
 
     /** @var string|null */
-    private $requestTarget;
+    private $request_target;
 
     /** @var UriInterface|null */
     private $uri;
 
     public function getRequestTarget(): string
     {
-        if (null !== $this->requestTarget) {
-            return $this->requestTarget;
+        if (null !== $this->request_target) {
+            return $this->request_target;
         }
 
         if ('' === $target = $this->uri->getPath()) {
@@ -55,7 +55,7 @@ trait RequestTrait
         }
 
         $new = clone $this;
-        $new->requestTarget = $requestTarget;
+        $new->request_target = $requestTarget;
 
         return $new;
     }
@@ -98,13 +98,13 @@ trait RequestTrait
         $new->uri = $uri;
 
         if (!$preserveHost || !$this->hasHeader('Host')) {
-            $new->updateHostFromUri();
+            $new->update_host_from_uri();
         }
 
         return $new;
     }
 
-    private function updateHostFromUri(): void
+    private function update_host_from_uri(): void
     {
         if ('' === $host = $this->uri->getHost()) {
             return;
@@ -114,10 +114,10 @@ trait RequestTrait
             $host .= ':' . $port;
         }
 
-        if (isset($this->headerNames['host'])) {
-            $header = $this->headerNames['host'];
+        if (isset($this->header_names['host'])) {
+            $header = $this->header_names['host'];
         } else {
-            $this->headerNames['host'] = $header = 'Host';
+            $this->header_names['host'] = $header = 'Host';
         }
 
         // Ensure Host is the first header.

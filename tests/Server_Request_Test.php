@@ -2,21 +2,21 @@
 
 namespace Tests\Nyholm\Psr7;
 
-use Nyholm\Psr7\ServerRequest;
-use Nyholm\Psr7\UploadedFile;
+use Nyholm\Psr7\Server_Request;
+use Nyholm\Psr7\Uploaded_File;
 use PHPUnit\Framework\TestCase;
 
 /**
- * @covers \Nyholm\Psr7\ServerRequest
+ * @covers \Nyholm\Psr7\Server_Request
  */
-class ServerRequestTest extends TestCase
+class Server_Request_Test extends TestCase
 {
-    public function testUploadedFiles()
+    public function test_uploaded__files()
     {
-        $request1 = new ServerRequest('GET', '/');
+        $request1 = new Server_Request('GET', '/');
 
         $files = [
-            'file' => new UploadedFile('test', 123, \UPLOAD_ERR_OK),
+            'file' => new Uploaded_File('test', 123, \UPLOAD_ERR_OK),
         ];
 
         $request2 = $request1->withUploadedFiles($files);
@@ -26,17 +26,17 @@ class ServerRequestTest extends TestCase
         $this->assertSame($files, $request2->getUploadedFiles());
     }
 
-    public function testServerParams()
+    public function test_server_params()
     {
         $params = ['name' => 'value'];
 
-        $request = new ServerRequest('GET', '/', [], null, '1.1', $params);
+        $request = new Server_Request('GET', '/', [], null, '1.1', $params);
         $this->assertSame($params, $request->getServerParams());
     }
 
-    public function testCookieParams()
+    public function test_cookie_params()
     {
-        $request1 = new ServerRequest('GET', '/');
+        $request1 = new Server_Request('GET', '/');
 
         $params = ['name' => 'value'];
 
@@ -47,12 +47,12 @@ class ServerRequestTest extends TestCase
         $this->assertSame($params, $request2->getCookieParams());
     }
 
-    public function testQueryParams()
+    public function test_query_params()
     {
-        $request0 = new ServerRequest('GET', '/');
+        $request0 = new Server_Request('GET', '/');
         $this->assertEmpty($request0->getQueryParams());
 
-        $request1 = new ServerRequest('GET', '/?foo=bar');
+        $request1 = new Server_Request('GET', '/?foo=bar');
         $params = ['name' => 'value'];
         $request2 = $request1->withQueryParams($params);
 
@@ -61,9 +61,9 @@ class ServerRequestTest extends TestCase
         $this->assertSame($params, $request2->getQueryParams());
     }
 
-    public function testParsedBody()
+    public function test_parsed_body()
     {
-        $request1 = new ServerRequest('GET', '/');
+        $request1 = new Server_Request('GET', '/');
 
         $params = ['name' => 'value'];
 
@@ -74,9 +74,9 @@ class ServerRequestTest extends TestCase
         $this->assertSame($params, $request2->getParsedBody());
     }
 
-    public function testAttributes()
+    public function test_attributes()
     {
-        $request1 = new ServerRequest('GET', '/');
+        $request1 = new Server_Request('GET', '/');
 
         $request2 = $request1->withAttribute('name', 'value');
         $request3 = $request2->withAttribute('other', 'otherValue');
@@ -102,16 +102,16 @@ class ServerRequestTest extends TestCase
         $this->assertEquals(['name' => 'value'], $request4->getAttributes());
     }
 
-    public function testNullAttribute()
+    public function test_null_attribute()
     {
-        $request = (new ServerRequest('GET', '/'))->withAttribute('name', null);
+        $request = (new Server_Request('GET', '/'))->withAttribute('name', null);
 
         $this->assertSame(['name' => null], $request->getAttributes());
         $this->assertNull($request->getAttribute('name', 'different-default'));
 
-        $requestWithoutAttribute = $request->withoutAttribute('name');
+        $request_without_attribute = $request->withoutAttribute('name');
 
-        $this->assertSame([], $requestWithoutAttribute->getAttributes());
-        $this->assertSame('different-default', $requestWithoutAttribute->getAttribute('name', 'different-default'));
+        $this->assertSame([], $request_without_attribute->getAttributes());
+        $this->assertSame('different-default', $request_without_attribute->getAttribute('name', 'different-default'));
     }
 }

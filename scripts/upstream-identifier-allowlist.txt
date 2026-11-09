@@ -1,0 +1,10 @@
+# PHPUnit TestCase lifecycle and assertion hooks allowed as method names only in TestCase subclasses.
+# PSR/upstream interface methods are allowed only on the declaring class/trait via reflection
+# (see check-legacy-names.php build_scoped_upstream_method_allowlist()).
+setUp
+tearDown
+setUpBeforeClass
+tearDownAfterClass
+assertPreConditions
+assertPostConditions
+onNotSuccessfulTest

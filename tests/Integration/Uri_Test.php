@@ -6,7 +6,7 @@ use Http\Psr7Test\UriIntegrationTest;
 use Nyholm\Psr7\Uri;
 use Psr\Http\Message\UriInterface;
 
-class UriTest extends UriIntegrationTest
+class Uri_Test extends UriIntegrationTest
 {
     public function createUri($uri): UriInterface
     {

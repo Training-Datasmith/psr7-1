@@ -4,16 +4,16 @@ declare(strict_types=1);
 
 namespace Tests\Nyholm\Psr7\Factory;
 
-use Nyholm\Psr7\Factory\HttplugFactory;
+use Nyholm\Psr7\Factory\Httplug_Factory;
 use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\StreamInterface;
 use Psr\Http\Message\UriInterface;
 
-class HttplugFactoryTest extends TestCase
+class Httplug_Factory_Test extends TestCase
 {
-    public function testCreateRequest()
+    public function test_create_request()
     {
-        $factory = new HttplugFactory();
+        $factory = new Httplug_Factory();
         $r = $factory->createRequest('POST', 'https://nyholm.tech', ['Content-Type' => 'text/html'], 'foobar', '2.0');
 
         $this->assertEquals('POST', $r->getMethod());
@@ -27,9 +27,9 @@ class HttplugFactoryTest extends TestCase
         $this->assertEquals('text/html', $headers['Content-Type'][0]);
     }
 
-    public function testCreateResponse()
+    public function test_create_response()
     {
-        $factory = new HttplugFactory();
+        $factory = new Httplug_Factory();
         $r = $factory->createResponse(217, 'Perfect', ['Content-Type' => 'text/html'], 'foobar', '2.0');
 
         $this->assertEquals(217, $r->getStatusCode());
@@ -43,18 +43,18 @@ class HttplugFactoryTest extends TestCase
         $this->assertEquals('text/html', $headers['Content-Type'][0]);
     }
 
-    public function testCreateStream()
+    public function test_create_stream()
     {
-        $factory = new HttplugFactory();
+        $factory = new Httplug_Factory();
         $stream = $factory->createStream('foobar');
 
         $this->assertInstanceOf(StreamInterface::class, $stream);
         $this->assertEquals('foobar', $stream->__toString());
     }
 
-    public function testCreateUri()
+    public function test_create_uri()
     {
-        $factory = new HttplugFactory();
+        $factory = new Httplug_Factory();
         $uri = $factory->createUri('https://nyholm.tech/foo');
 
         $this->assertInstanceOf(UriInterface::class, $uri);

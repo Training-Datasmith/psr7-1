@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Nyholm\Psr7\Factory;
 
-use Nyholm\Psr7\{Request, Response, ServerRequest, Stream, UploadedFile, Uri};
+use Nyholm\Psr7\{Request, Response, Server_Request, Stream, Uploaded_File, Uri};
 use Psr\Http\Message\{RequestFactoryInterface, RequestInterface, ResponseFactoryInterface, ResponseInterface, ServerRequestFactoryInterface, ServerRequestInterface, StreamFactoryInterface, StreamInterface, UploadedFileFactoryInterface, UploadedFileInterface, UriFactoryInterface, UriInterface};
 
 /**
@@ -13,7 +13,7 @@ use Psr\Http\Message\{RequestFactoryInterface, RequestInterface, ResponseFactory
  *
  * @final This class should never be extended. See https://github.com/Nyholm/psr7/blob/master/doc/final.md
  */
-class Psr17Factory implements RequestFactoryInterface, ResponseFactoryInterface, ServerRequestFactoryInterface, StreamFactoryInterface, UploadedFileFactoryInterface, UriFactoryInterface
+class Psr17_Factory implements RequestFactoryInterface, ResponseFactoryInterface, ServerRequestFactoryInterface, StreamFactoryInterface, UploadedFileFactoryInterface, UriFactoryInterface
 {
     public function createRequest(string $method, $uri): RequestInterface
     {
@@ -63,7 +63,7 @@ class Psr17Factory implements RequestFactoryInterface, ResponseFactoryInterface,
             $size = $stream->getSize();
         }
 
-        return new UploadedFile($stream, $size, $error, $clientFilename, $clientMediaType);
+        return new Uploaded_File($stream, $size, $error, $clientFilename, $clientMediaType);
     }
 
     public function createUri(string $uri = ''): UriInterface
@@ -73,6 +73,6 @@ class Psr17Factory implements RequestFactoryInterface, ResponseFactoryInterface,
 
     public function createServerRequest(string $method, $uri, array $serverParams = []): ServerRequestInterface
     {
-        return new ServerRequest($method, $uri, [], null, '1.1', $serverParams);
+        return new Server_Request($method, $uri, [], null, '1.1', $serverParams);
     }
 }

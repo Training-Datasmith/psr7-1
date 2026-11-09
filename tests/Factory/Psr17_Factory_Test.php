@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace Tests\Nyholm\Psr7\Factory;
 
-use Nyholm\Psr7\Factory\Psr17Factory;
+use Nyholm\Psr7\Factory\Psr17_Factory;
 use PHPUnit\Framework\TestCase;
 
-class Psr17FactoryTest extends TestCase
+class Psr17_Factory_Test extends TestCase
 {
-    public function testCreateResponse()
+    public function test_create_response()
     {
-        $factory = new Psr17Factory();
+        $factory = new Psr17_Factory();
         $r = $factory->createResponse(200);
         $this->assertEquals('OK', $r->getReasonPhrase());
 

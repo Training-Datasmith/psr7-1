@@ -6,7 +6,7 @@ use Http\Psr7Test\ResponseIntegrationTest;
 use Nyholm\Psr7\Response;
 use Psr\Http\Message\ResponseInterface;
 
-class ResponseTest extends ResponseIntegrationTest
+class Response_Test extends ResponseIntegrationTest
 {
     public function createSubject(): ResponseInterface
     {

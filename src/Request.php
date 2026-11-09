@@ -14,8 +14,8 @@ use Psr\Http\Message\{RequestInterface, StreamInterface, UriInterface};
  */
 class Request implements RequestInterface
 {
-    use MessageTrait;
-    use RequestTrait;
+    use Message_Trait;
+    use Request_Trait;
 
     /**
      * @param string $method HTTP method
@@ -32,11 +32,11 @@ class Request implements RequestInterface
 
         $this->method = $method;
         $this->uri = $uri;
-        $this->setHeaders($headers);
+        $this->set_headers($headers);
         $this->protocol = $version;
 
         if (!$this->hasHeader('Host')) {
-            $this->updateHostFromUri();
+            $this->update_host_from_uri();
         }
 
         // If we got no body, defer initialization of the stream until Request::getBody()

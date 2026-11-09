@@ -39,7 +39,7 @@ the [PSR-7 specification](https://www.php-fig.org/psr/psr-7/).
 Use the PSR-17 factory to create requests, streams, URIs etc.
 
 ```php
-$psr17Factory = new \Nyholm\Psr7\Factory\Psr17Factory();
+$psr17Factory = new \Nyholm\Psr7\Factory\Psr17_Factory();
 $request = $psr17Factory->createRequest('GET', 'http://tnyholm.se');
 $stream = $psr17Factory->createStream('foobar');
 ```
@@ -54,7 +54,7 @@ composer require kriswallsmith/buzz
 ```
 
 ```php
-$psr17Factory = new \Nyholm\Psr7\Factory\Psr17Factory();
+$psr17Factory = new \Nyholm\Psr7\Factory\Psr17_Factory();
 $psr18Client = new \Buzz\Client\Curl($psr17Factory);
 
 $request = $psr17Factory->createRequest('GET', 'http://tnyholm.se');
@@ -71,12 +71,12 @@ composer require nyholm/psr7-server
 ```
 
 ```php
-$psr17Factory = new \Nyholm\Psr7\Factory\Psr17Factory();
+$psr17Factory = new \Nyholm\Psr7\Factory\Psr17_Factory();
 
 $creator = new \Nyholm\Psr7Server\ServerRequestCreator(
-    $psr17Factory, // ServerRequestFactory
+    $psr17Factory, // Server_RequestFactory
     $psr17Factory, // UriFactory
-    $psr17Factory, // UploadedFileFactory
+    $psr17Factory, // Uploaded_FileFactory
     $psr17Factory  // StreamFactory
 );
 
@@ -90,7 +90,7 @@ composer require laminas/laminas-httphandlerrunner
 ```
 
 ```php
-$psr17Factory = new \Nyholm\Psr7\Factory\Psr17Factory();
+$psr17Factory = new \Nyholm\Psr7\Factory\Psr17_Factory();
 
 $responseBody = $psr17Factory->createStream('Hello world');
 $response = $psr17Factory->createResponse(200)->withBody($responseBody);

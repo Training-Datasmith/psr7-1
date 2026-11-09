@@ -6,7 +6,7 @@ use Http\Psr7Test\RequestIntegrationTest;
 use Nyholm\Psr7\Request;
 use Psr\Http\Message\RequestInterface;
 
-class RequestTest extends RequestIntegrationTest
+class Request_Test extends RequestIntegrationTest
 {
     public function createSubject(): RequestInterface
     {
