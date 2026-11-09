@@ -51,7 +51,14 @@ class Uri implements UriInterface
     public function __construct(string $uri = '')
     {
         if ('' !== $uri) {
-            if (false === $parts = \parse_url($uri)) {
+            $parts = \parse_url($uri);
+            if (false === $parts && \preg_match('#^//([^/:@]+):(\d{1,5})$#', $uri, $matches)) {
+                $parts = [
+                    'host' => $matches[1],
+                    'port' => (int) $matches[2],
+                ];
+            }
+            if (false === $parts) {
                 throw new \InvalidArgumentException(\sprintf('Unable to parse URI: "%s"', $uri));
             }
 

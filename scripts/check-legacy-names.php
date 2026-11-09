@@ -116,28 +116,43 @@ function build_scoped_upstream_method_allowlist(string $root): array
                 }
             }
 
-            if (strpos($file->getPathname(), '/tests/') !== false) {
-                $parent = $ref->getParentClass();
-                while ($parent !== false) {
-                    $parentName = $parent->getName();
-                    if ($parentName === 'PHPUnit\\Framework\\TestCase') {
-                        break;
-                    }
-                    foreach ($parent->getMethods() as $parentMethod) {
-                        if ($parentMethod->getDeclaringClass()->getName() !== $parentName) {
-                            continue;
-                        }
-                        if ($parentMethod->isAbstract() || $parentMethod->isPublic()) {
-                            $scoped[$typeName . '::' . $parentMethod->getName()] = true;
-                        }
-                    }
-                    $parent = $parent->getParentClass();
-                }
-            }
         }
     }
 
     return $scoped;
+}
+
+/**
+ * @return array<string, true> keys: path/relative::ClassName::methodName
+ */
+function load_site_method_allowlist(string $path, string $root): array
+{
+    $allowlist = [];
+    $root = rtrim($root, '/') . '/';
+    foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
+        $line = trim($line);
+        if ($line === '' || $line[0] === '#') {
+            continue;
+        }
+        $parts = explode('::', $line);
+        if (count($parts) !== 3) {
+            fwrite(STDERR, "check-legacy-names: invalid site method allowlist entry: {$line}\n");
+            exit(1);
+        }
+        $allowlist[implode('::', $parts)] = true;
+    }
+
+    return $allowlist;
+}
+
+function relative_repo_path(string $filePath, string $root): string
+{
+    $root = rtrim($root, '/') . '/';
+    if (strpos($filePath, $root) === 0) {
+        return substr($filePath, strlen($root));
+    }
+
+    return $filePath;
 }
 
 /**
@@ -201,15 +216,25 @@ function is_snake_case_test_method_name(string $name): bool
  */
 function is_allowed_camelcase_method_declaration(
     string $methodName,
+    string $filePath,
+    string $root,
     bool $underSrc,
     bool $underTests,
     ?string $typeName,
     bool $extendsTestCase,
     array $scopedMethodAllowlist,
+    array $siteMethodAllowlist,
     array $phpunitHooks
 ): bool {
     if (!$underSrc && !$underTests) {
         return true;
+    }
+    if ($typeName !== null) {
+        $rel = relative_repo_path($filePath, $root);
+        $siteKey = $rel . '::' . $typeName . '::' . $methodName;
+        if (isset($siteMethodAllowlist[$siteKey])) {
+            return true;
+        }
     }
     if ($underSrc && $typeName !== null) {
         return isset($scopedMethodAllowlist[$typeName . '::' . $methodName]);
@@ -231,13 +256,68 @@ function is_allowed_camelcase_method_declaration(
     return false;
 }
 
+function is_studly_snake_type_name(string $name): bool
+{
+    return (bool) preg_match('/^[A-Z][a-zA-Z0-9]*(_[A-Z][a-zA-Z0-9]*)*$/', $name);
+}
+
+function is_superglobal_identifier(string $name): bool
+{
+    if ($name === 'GLOBALS') {
+        return true;
+    }
+
+    return (bool) preg_match('/^_[A-Z][A-Z0-9_]*$/', $name);
+}
+
+function has_repo_owned_hump(string $name): bool
+{
+    if ($name === '') {
+        return false;
+    }
+    if (is_superglobal_identifier($name)) {
+        return false;
+    }
+    if (is_studly_snake_type_name($name)) {
+        return false;
+    }
+    if (preg_match('/_[A-Z]/', $name)) {
+        return true;
+    }
+
+    return (bool) preg_match('/[a-z][A-Z]/', $name);
+}
+
 function is_repo_camelcase_identifier(string $name): bool
 {
-  if ($name === '' || !ctype_lower($name[0])) {
-    return false;
-  }
+    return has_repo_owned_hump($name);
+}
 
-  return (bool) preg_match('/[a-z][A-Z]/', $name);
+/**
+ * @return list<string>
+ */
+function collect_docblock_hump_violations(string $filePath, string $code): array
+{
+    $violations = [];
+    foreach (token_get_all($code) as $token) {
+        if (!is_array($token) || $token[0] !== T_DOC_COMMENT) {
+            continue;
+        }
+        $block = $token[1];
+        if (preg_match_all('/@(?:var|param|return|method|property)\b[^@]*/s', $block, $tags)) {
+            foreach ($tags[0] as $tag) {
+                if (preg_match_all('/\$([A-Za-z_][A-Za-z0-9_]*)/', $tag, $vars)) {
+                    foreach ($vars[1] as $varName) {
+                        if (has_repo_owned_hump($varName)) {
+                            $violations[] = sprintf('%s: repo-owned camelCase docblock identifier $%s', $filePath, $varName);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    return $violations;
 }
 
 /**
@@ -249,7 +329,9 @@ function is_repo_camelcase_identifier(string $name): bool
 function collect_snake_case_violations(
     string $filePath,
     string $code,
+    string $root,
     array $scopedMethodAllowlist,
+    array $siteMethodAllowlist,
     array $phpunitHooks,
     array $parameterAllowlist
 ): array {
@@ -288,11 +370,14 @@ function collect_snake_case_violations(
             $currentFunction = $text;
             if (is_repo_camelcase_identifier($text) && !is_allowed_camelcase_method_declaration(
                 $text,
+                $filePath,
+                $root,
                 $underSrc,
                 $underTests,
                 $typeName,
                 $extendsTestCase,
                 $scopedMethodAllowlist,
+                $siteMethodAllowlist,
                 $phpunitHooks
             )) {
                 $violations[] = sprintf('%s: repo-owned camelCase identifier %s', $filePath, $text);
@@ -324,18 +409,21 @@ function collect_snake_case_violations(
         }
     }
 
-    return $violations;
+    return array_merge($violations, collect_docblock_hump_violations($filePath, $code));
 }
 
 /**
  * @param array<string, true> $scopedMethodAllowlist
+ * @param array<string, true> $siteMethodAllowlist
  * @param array<string, true> $phpunitHooks
  * @param array<string, list<string>> $parameterAllowlist
  * @return list<string>
  */
 function collect_snake_case_violations_tree(
     string $dir,
+    string $root,
     array $scopedMethodAllowlist,
+    array $siteMethodAllowlist,
     array $phpunitHooks,
     array $parameterAllowlist
 ): array
@@ -357,7 +445,9 @@ function collect_snake_case_violations_tree(
             collect_snake_case_violations(
                 $file->getPathname(),
                 $contents,
+                $root,
                 $scopedMethodAllowlist,
+                $siteMethodAllowlist,
                 $phpunitHooks,
                 $parameterAllowlist
             )
@@ -369,6 +459,7 @@ function collect_snake_case_violations_tree(
 
 $phpunitHooks = load_phpunit_hook_allowlist($root . '/scripts/upstream-identifier-allowlist.txt');
 $scopedMethodAllowlist = build_scoped_upstream_method_allowlist($root);
+$siteMethodAllowlist = load_site_method_allowlist($root . '/scripts/upstream-method-allowlist.txt', $root);
 $parameterAllowlist = load_parameter_allowlist($root . '/scripts/upstream-parameter-allowlist.txt');
 
 $scanPaths = [
@@ -551,7 +642,9 @@ if (!is_string($demoRequestContents) || $demoRequestContents === $requestTestCon
 $demoSnakeViolations = collect_snake_case_violations(
     $requestTestFile,
     $demoRequestContents,
+    $root,
     $scopedMethodAllowlist,
+    $siteMethodAllowlist,
     $phpunitHooks,
     $parameterAllowlist
 );
@@ -560,6 +653,42 @@ if ($demoSnakeViolations === []) {
     exit(1);
 }
 fwrite(STDOUT, "check-legacy-names: camelCase identifier demo failed for injected variable name.\n");
+
+$demoHumpContents = preg_replace('/\$r = /', '$foo_Bar = null; $r = ', $requestTestContents, 1);
+if (!is_string($demoHumpContents) || $demoHumpContents === $requestTestContents) {
+    fwrite(STDERR, "check-legacy-names: underscore-hump demo could not inject \$foo_Bar.\n");
+    exit(1);
+}
+$demoHumpViolations = collect_snake_case_violations(
+    $requestTestFile,
+    $demoHumpContents,
+    $root,
+    $scopedMethodAllowlist,
+    $siteMethodAllowlist,
+    $phpunitHooks,
+    $parameterAllowlist
+);
+if ($demoHumpViolations === []) {
+    fwrite(STDERR, "check-legacy-names: underscore-hump demo did not fail.\n");
+    exit(1);
+}
+fwrite(STDOUT, "check-legacy-names: underscore-hump identifier demo failed for injected \$foo_Bar.\n");
+
+$demoDocblockContents = preg_replace(
+    '/(^\s*class Response_Test\b)/m',
+    "/** @var int \$foo_Bar */\n$1",
+    $responseContents,
+    1
+);
+if (!is_string($demoDocblockContents) || $demoDocblockContents === $responseContents) {
+    fwrite(STDERR, "check-legacy-names: docblock hump demo could not inject @var \$foo_Bar.\n");
+    exit(1);
+}
+if (collect_docblock_hump_violations($responseTestFile, $demoDocblockContents) === []) {
+    fwrite(STDERR, "check-legacy-names: docblock hump demo did not fail.\n");
+    exit(1);
+}
+fwrite(STDOUT, "check-legacy-names: docblock hump demo failed for injected @var \$foo_Bar.\n");
 
 $traitFile = $root . '/src/Request_Trait.php';
 $traitContents = file_get_contents($traitFile);
@@ -580,7 +709,9 @@ if (!is_string($demoTraitContents) || $demoTraitContents === $traitContents) {
 $demoTargetPathViolations = collect_snake_case_violations(
     $traitFile,
     $demoTraitContents,
+    $root,
     $scopedMethodAllowlist,
+    $siteMethodAllowlist,
     $phpunitHooks,
     $parameterAllowlist
 );
@@ -598,7 +729,7 @@ if (!is_string($passTraitContents)) {
     fwrite(STDERR, "check-legacy-names: allowlist pass demo could not prepare Request_Trait::withUri.\n");
     exit(1);
 }
-if (collect_snake_case_violations($traitFile, $passTraitContents, $scopedMethodAllowlist, $phpunitHooks, $parameterAllowlist) !== []) {
+if (collect_snake_case_violations($traitFile, $passTraitContents, $root, $scopedMethodAllowlist, $siteMethodAllowlist, $phpunitHooks, $parameterAllowlist) !== []) {
     fwrite(STDERR, "check-legacy-names: allowlisted upstream name demo failed on its listed site.\n");
     exit(1);
 }
@@ -619,7 +750,9 @@ if ($count !== 1) {
 $demoMultipartViolations = collect_snake_case_violations(
     $messageTraitFile,
     $demoMessageTraitContents,
+    $root,
     $scopedMethodAllowlist,
+    $siteMethodAllowlist,
     $phpunitHooks,
     $parameterAllowlist
 );
@@ -648,7 +781,9 @@ if (!is_string($demoTestFooContents) || $demoTestFooContents === $responseTestCo
 $demoTestFooViolations = collect_snake_case_violations(
     $responseTestFile,
     $demoTestFooContents,
+    $root,
     $scopedMethodAllowlist,
+    $siteMethodAllowlist,
     $phpunitHooks,
     $parameterAllowlist
 );
@@ -672,8 +807,8 @@ foreach ($scanPaths as $path) {
 $violations = array_merge($violations, collect_class_file_mismatches([$root . '/src', $root . '/tests']));
 $violations = array_merge(
     $violations,
-    collect_snake_case_violations_tree($root . '/src', $scopedMethodAllowlist, $phpunitHooks, $parameterAllowlist),
-    collect_snake_case_violations_tree($root . '/tests', $scopedMethodAllowlist, $phpunitHooks, $parameterAllowlist)
+    collect_snake_case_violations_tree($root . '/src', $root, $scopedMethodAllowlist, $siteMethodAllowlist, $phpunitHooks, $parameterAllowlist),
+    collect_snake_case_violations_tree($root . '/tests', $root, $scopedMethodAllowlist, $siteMethodAllowlist, $phpunitHooks, $parameterAllowlist)
 );
 
 fwrite(STDOUT, "check-legacy-names: matcher rejects Nyholm\\Psr7\\Factory\\Psr17Factory.\n");

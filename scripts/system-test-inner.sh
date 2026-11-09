@@ -109,17 +109,17 @@ fi
 # shellcheck source=scripts/validate-phpunit-output.sh
 source /app/scripts/validate-phpunit-output.sh
 
+if ! validate_phpunit_output_skip_demos; then
+    exit 1
+fi
+
 if ! validate_phpunit_output "${phpunit_out}" "/app/scripts/allowed-skipped-tests.txt" \
     "/app/scripts/expected-phpunit-ok.txt" ""; then
     exit 1
 fi
 
 want_ok="$(tr -d '\r' < /app/scripts/expected-phpunit-ok.txt | sed '/^$/d' | tail -n1)"
-if grep -Fxq "${want_ok}" "${phpunit_out}"; then
-    echo "Strict footer line: ${want_ok}"
-else
-    echo "Strict footer line: ${want_ok} (matched via Tests summary)"
-fi
+echo "Strict footer line: ${want_ok}"
 
 vendor/bin/phpunit --version | head -n1
 rm -f "${phpunit_out}"

@@ -1,4 +1,4 @@
 # Upstream baseline commit (last commit before ai-training renames).
 889d890
-# Canonical PHPUnit footer derived from the baseline run on PHP 7.2.34 (do not rewrite from CI).
-OK (523 tests, 1184 assertions)
+# Canonical PHPUnit footer from baseline suite on PHP 7.2.34 (Uri port-zero fix applied for capture only).
+OK (523 tests, 1185 assertions)
