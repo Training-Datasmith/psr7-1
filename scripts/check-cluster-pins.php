@@ -2,14 +2,18 @@
 
 declare(strict_types=1);
 
+// Composer records root require "dev-branch as X.Y.Z" aliases only in vendor/composer/installed.php
+// (versions[name].aliases). installed.json keeps the dev branch in version/source.reference only.
 $expected = [
     'psr/http-factory' => [
         'alias' => '1.1.0',
         'reference' => 'f9a0862677e7b1b9bd8dc2ed459f48c7e06ff277',
+        'version' => 'dev-remote-test-2026-10-07',
     ],
     'psr/http-message' => [
         'alias' => '2.0.0',
         'reference' => 'c941fca6736161fe07e79fa83d85217b39411cef',
+        'version' => 'dev-remote-test-2026-10-07',
     ],
 ];
 
@@ -28,7 +32,7 @@ if (!is_readable($installedPhp) || !is_readable($installedJson)) {
 }
 
 /**
- * @param array<string, array{alias: string, reference: string}> $map
+ * @param array<string, array{alias: string, reference: string, version: string}> $map
  * @param array<string, array{reference?: string, aliases?: list<string>}> $versions
  */
 function validate_installed_php(array $map, array $versions, bool $quiet = false): bool
@@ -47,7 +51,7 @@ function validate_installed_php(array $map, array $versions, bool $quiet = false
         if (!in_array($want['alias'], $aliases, true)) {
             if (!$quiet) {
                 fwrite(STDERR, sprintf(
-                    "check-cluster-pins: %s alias mismatch (expected %s in aliases %s).\n",
+                    "check-cluster-pins: %s installed.php alias mismatch (expected %s in aliases %s).\n",
                     $name,
                     $want['alias'],
                     json_encode($aliases)
@@ -66,7 +70,7 @@ function validate_installed_php(array $map, array $versions, bool $quiet = false
         if (!hash_equals(strtolower($want['reference']), strtolower($reference))) {
             if (!$quiet) {
                 fwrite(STDERR, sprintf(
-                    "check-cluster-pins: %s reference mismatch (expected %s, got %s).\n",
+                    "check-cluster-pins: %s installed.php reference mismatch (expected %s, got %s).\n",
                     $name,
                     $want['reference'],
                     $reference
@@ -80,43 +84,10 @@ function validate_installed_php(array $map, array $versions, bool $quiet = false
 }
 
 /**
- * @param array<string, mixed> $package
- */
-/**
- * @param list<string> $phpAliases
- */
-function installed_json_has_alias(array $package, string $alias, array $phpAliases): bool
-{
-    if (isset($package['aliases']) && is_array($package['aliases'])) {
-        foreach ($package['aliases'] as $value) {
-            if ((string) $value === $alias) {
-                return true;
-            }
-        }
-    }
-
-    if (isset($package['version']) && (string) $package['version'] === $alias) {
-        return true;
-    }
-
-    if (isset($package['version_normalized']) && (string) $package['version_normalized'] === $alias) {
-        return true;
-    }
-
-    // Composer 2.8 keeps dev branch in installed.json version; root "as" alias lives in installed.php aliases.
-    if (in_array($alias, $phpAliases, true) && isset($package['version']) && is_string($package['version'])) {
-        return true;
-    }
-
-    return false;
-}
-
-/**
- * @param array<string, array{alias: string, reference: string}> $map
+ * @param array<string, array{alias: string, reference: string, version: string}> $map
  * @param array<string, array<string, mixed>> $packagesByName
- * @param array<string, array<string, mixed>> $installedPhpVersions
  */
-function validate_installed_json(array $map, array $packagesByName, array $installedPhpVersions, bool $quiet = false): bool
+function validate_installed_json(array $map, array $packagesByName, bool $quiet = false): bool
 {
     $failed = false;
     foreach ($map as $name => $want) {
@@ -147,16 +118,14 @@ function validate_installed_json(array $map, array $packagesByName, array $insta
             }
             $failed = true;
         }
-        $phpAliases = $installedPhpVersions[$name]['aliases'] ?? [];
-        if (!is_array($phpAliases)) {
-            $phpAliases = [];
-        }
-        if (!installed_json_has_alias($package, $want['alias'], $phpAliases)) {
+        $version = $package['version'] ?? null;
+        if (!is_string($version) || $version !== $want['version']) {
             if (!$quiet) {
                 fwrite(STDERR, sprintf(
-                    "check-cluster-pins: %s installed.json alias mismatch (expected %s in version/version_normalized/aliases).\n",
+                    "check-cluster-pins: %s installed.json version mismatch (expected %s, got %s).\n",
                     $name,
-                    $want['alias']
+                    $want['version'],
+                    is_string($version) ? $version : json_encode($version)
                 ));
             }
             $failed = true;
@@ -202,6 +171,21 @@ function load_installed_json(string $installedJson): array
 }
 
 /**
+ * @param array<string, array<string, mixed>> $pkg
+ */
+function installed_php_source_url(array $pkg): string
+{
+    if (isset($pkg['url']) && is_string($pkg['url'])) {
+        return strtolower($pkg['url']);
+    }
+    if (isset($pkg['source']['url']) && is_string($pkg['source']['url'])) {
+        return strtolower($pkg['source']['url']);
+    }
+
+    return '';
+}
+
+/**
  * @param list<string> $names
  * @param array<string, array<string, mixed>> $versions
  * @param array<string, string> $jsonReferences
@@ -220,14 +204,20 @@ function validate_packagist_packages(
         if (!isset($versions[$name])) {
             fwrite(STDERR, sprintf("check-cluster-pins: %s missing from installed.php.\n", $name));
             $failed = true;
-        } else {
-            $phpRef = strtolower((string) ($versions[$name]['reference'] ?? ''));
-            foreach ($clusterRefs as $clusterRef) {
-                if ($phpRef !== '' && hash_equals(strtolower($clusterRef), $phpRef)) {
-                    fwrite(STDERR, sprintf("check-cluster-pins: %s installed.php reference is index SHA %s.\n", $name, $phpRef));
-                    $failed = true;
-                }
+            continue;
+        }
+        $phpPkg = $versions[$name];
+        $phpRef = strtolower((string) ($phpPkg['reference'] ?? ''));
+        foreach ($clusterRefs as $clusterRef) {
+            if ($phpRef !== '' && hash_equals(strtolower($clusterRef), $phpRef)) {
+                fwrite(STDERR, sprintf("check-cluster-pins: %s installed.php reference is index SHA %s.\n", $name, $phpRef));
+                $failed = true;
             }
+        }
+        $phpUrl = installed_php_source_url($phpPkg);
+        if ($phpUrl !== '' && strpos($phpUrl, 'training-datasmith') !== false) {
+            fwrite(STDERR, sprintf("check-cluster-pins: %s installed.php URL %s is not Packagist.\n", $name, $phpUrl));
+            $failed = true;
         }
 
         if (!isset($jsonReferences[$name])) {
@@ -235,16 +225,20 @@ function validate_packagist_packages(
             $failed = true;
             continue;
         }
-        $reference = $jsonReferences[$name];
+        $jsonRef = $jsonReferences[$name];
         foreach ($clusterRefs as $clusterRef) {
-            if (hash_equals(strtolower($clusterRef), $reference)) {
-                fwrite(STDERR, sprintf("check-cluster-pins: %s installed.json reference is index SHA %s.\n", $name, $reference));
+            if (hash_equals(strtolower($clusterRef), $jsonRef)) {
+                fwrite(STDERR, sprintf("check-cluster-pins: %s installed.json reference is index SHA %s.\n", $name, $jsonRef));
                 $failed = true;
             }
         }
+        if ($phpRef !== '' && !hash_equals($phpRef, $jsonRef)) {
+            fwrite(STDERR, sprintf("check-cluster-pins: %s installed.php and installed.json reference differ (%s vs %s).\n", $name, $phpRef, $jsonRef));
+            $failed = true;
+        }
         $url = $jsonUrls[$name] ?? '';
         if ($url !== '' && strpos($url, 'training-datasmith') !== false) {
-            fwrite(STDERR, sprintf("check-cluster-pins: %s source URL %s is not Packagist.\n", $name, $url));
+            fwrite(STDERR, sprintf("check-cluster-pins: %s installed.json source URL %s is not Packagist.\n", $name, $url));
             $failed = true;
         }
     }
@@ -265,16 +259,29 @@ if (validate_installed_php($expected, $demoVersions, true)) {
     fwrite(STDERR, "check-cluster-pins: wrong-SHA demo for installed.php did not fail.\n");
     exit(1);
 }
-if (!validate_installed_json($expected, $packagesByName, $versions)) {
+if (!validate_installed_json($expected, $packagesByName)) {
     fwrite(STDERR, "check-cluster-pins: installed.json should still match during installed.php wrong-SHA demo.\n");
     exit(1);
 }
 fwrite(STDOUT, "check-cluster-pins: wrong-SHA demo failed for installed.php.\n");
 fwrite(STDOUT, "check-cluster-pins: installed.json still matched during the installed.php wrong-SHA demo.\n");
 
+$demoVersions = json_decode(json_encode($versions), true);
+$demoVersions['psr/http-factory']['aliases'] = ['9.9.9'];
+if (validate_installed_php($expected, $demoVersions, true)) {
+    fwrite(STDERR, "check-cluster-pins: wrong-alias demo for installed.php did not fail.\n");
+    exit(1);
+}
+if (!validate_installed_json($expected, $packagesByName)) {
+    fwrite(STDERR, "check-cluster-pins: installed.json should still match during installed.php wrong-alias demo.\n");
+    exit(1);
+}
+fwrite(STDOUT, "check-cluster-pins: wrong-alias demo failed for installed.php.\n");
+fwrite(STDOUT, "check-cluster-pins: installed.json still matched during the installed.php wrong-alias demo.\n");
+
 $demoPackages = $packagesByName;
 $demoPackages['psr/http-message']['source']['reference'] = str_repeat('1', 40);
-if (validate_installed_json($expected, $demoPackages, $versions, true)) {
+if (validate_installed_json($expected, $demoPackages, true)) {
     fwrite(STDERR, "check-cluster-pins: wrong-SHA demo for installed.json did not fail.\n");
     exit(1);
 }
@@ -285,16 +292,38 @@ if (!validate_installed_php($expected, $versions)) {
 fwrite(STDOUT, "check-cluster-pins: wrong-SHA demo failed for installed.json.\n");
 fwrite(STDOUT, "check-cluster-pins: installed.php still matched during the installed.json wrong-SHA demo.\n");
 
-if (!validate_installed_php($expected, $versions) || !validate_installed_json($expected, $packagesByName, $versions)) {
+$demoPackages = $packagesByName;
+$demoPackages['psr/http-factory']['version'] = 'dev-wrong-branch';
+if (validate_installed_json($expected, $demoPackages, true)) {
+    fwrite(STDERR, "check-cluster-pins: wrong-version demo for installed.json did not fail.\n");
+    exit(1);
+}
+if (!validate_installed_php($expected, $versions)) {
+    fwrite(STDERR, "check-cluster-pins: installed.php should still match during installed.json wrong-version demo.\n");
+    exit(1);
+}
+fwrite(STDOUT, "check-cluster-pins: wrong-version demo failed for installed.json.\n");
+fwrite(STDOUT, "check-cluster-pins: installed.php still matched during the installed.json wrong-version demo.\n");
+
+$cluster_refs = array_column($expected, 'reference');
+$demoVersions = json_decode(json_encode($versions), true);
+$demoVersions['phpunit/phpunit']['reference'] = $expected['psr/http-factory']['reference'];
+if (validate_packagist_packages($packagist_packages, $demoVersions, $references, $urls, $cluster_refs)) {
+    fwrite(STDERR, "check-cluster-pins: wrong installed.php Packagist SHA demo did not fail.\n");
+    exit(1);
+}
+fwrite(STDOUT, "check-cluster-pins: wrong installed.php reference demo failed for phpunit/phpunit.\n");
+fwrite(STDOUT, "check-cluster-pins: installed.json still matched during installed.php Packagist demo.\n");
+
+if (!validate_installed_php($expected, $versions) || !validate_installed_json($expected, $packagesByName)) {
     exit(1);
 }
 
-$cluster_refs = array_column($expected, 'reference');
 if (!validate_packagist_packages($packagist_packages, $versions, $references, $urls, $cluster_refs)) {
     exit(1);
 }
 
 fwrite(STDOUT, "check-cluster-pins: phpunit/phpunit and psr/log resolve from Packagist in installed.php and installed.json.\n");
-fwrite(STDOUT, "check-cluster-pins: installed.json alias via version/version_normalized/aliases, or paired with installed.php versions[].aliases for root \"as\".\n");
+fwrite(STDOUT, "check-cluster-pins: cluster aliases checked in installed.php only; installed.json uses dev version + source.reference.\n");
 fwrite(STDOUT, "check-cluster-pins: all cluster packages match expected SHAs and aliases.\n");
 exit(0);

@@ -4,21 +4,6 @@ declare(strict_types=1);
 
 $root = dirname(__DIR__);
 
-/** @return array<string, true> */
-function load_phpunit_hook_allowlist(string $path): array
-{
-    $allowlist = [];
-    foreach (file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [] as $line) {
-        $line = trim($line);
-        if ($line === '' || $line[0] === '#') {
-            continue;
-        }
-        $allowlist[$line] = true;
-    }
-
-    return $allowlist;
-}
-
 /**
  * @return array<string, true>
  */
@@ -212,8 +197,44 @@ function is_snake_case_test_method_name(string $name): bool
 
 /**
  * @param array<string, true> $scopedMethodAllowlist
- * @param array<string, true> $phpunitHooks
  */
+function method_overrides_phpunit_testcase(?string $fqcn, string $methodName): bool
+{
+    if ($fqcn === null || $fqcn === '' || !class_exists($fqcn)) {
+        return false;
+    }
+    try {
+        $ref = new ReflectionClass($fqcn);
+    } catch (ReflectionException $e) {
+        return false;
+    }
+    if (!$ref->isSubclassOf(\PHPUnit\Framework\TestCase::class)) {
+        return false;
+    }
+    if (!$ref->hasMethod($methodName)) {
+        return false;
+    }
+    $method = $ref->getMethod($methodName);
+    if ($method->getDeclaringClass()->getName() !== $fqcn) {
+        return false;
+    }
+
+    return (new ReflectionClass(\PHPUnit\Framework\TestCase::class))->hasMethod($methodName);
+}
+
+function extract_fqcn_from_code(string $code): ?string
+{
+    if (!preg_match('/namespace\s+([^;]+);/', $code, $nsMatch)) {
+        return null;
+    }
+    $typeName = extract_type_name($code);
+    if ($typeName === null) {
+        return null;
+    }
+
+    return trim($nsMatch[1]) . '\\' . $typeName;
+}
+
 function is_allowed_camelcase_method_declaration(
     string $methodName,
     string $filePath,
@@ -221,10 +242,10 @@ function is_allowed_camelcase_method_declaration(
     bool $underSrc,
     bool $underTests,
     ?string $typeName,
+    ?string $fqcn,
     bool $extendsTestCase,
     array $scopedMethodAllowlist,
-    array $siteMethodAllowlist,
-    array $phpunitHooks
+    array $siteMethodAllowlist
 ): bool {
     if (!$underSrc && !$underTests) {
         return true;
@@ -243,7 +264,7 @@ function is_allowed_camelcase_method_declaration(
         if (strpos($methodName, 'test') === 0) {
             return is_snake_case_test_method_name($methodName);
         }
-        if ($extendsTestCase && isset($phpunitHooks[$methodName])) {
+        if ($extendsTestCase && $fqcn !== null && method_overrides_phpunit_testcase($fqcn, $methodName)) {
             return true;
         }
         if ($typeName !== null && isset($scopedMethodAllowlist[$typeName . '::' . $methodName])) {
@@ -322,7 +343,6 @@ function collect_docblock_hump_violations(string $filePath, string $code): array
 
 /**
  * @param array<string, true> $scopedMethodAllowlist
- * @param array<string, true> $phpunitHooks
  * @param array<string, list<string>> $parameterAllowlist
  * @return list<string>
  */
@@ -332,7 +352,6 @@ function collect_snake_case_violations(
     string $root,
     array $scopedMethodAllowlist,
     array $siteMethodAllowlist,
-    array $phpunitHooks,
     array $parameterAllowlist
 ): array {
     $violations = [];
@@ -341,6 +360,7 @@ function collect_snake_case_violations(
     $underSrc = strpos($filePath, '/src/') !== false;
     $underTests = strpos($filePath, '/tests/') !== false;
     $typeName = extract_type_name($code);
+    $fqcn = extract_fqcn_from_code($code);
     $extendsTestCase = $underTests && extends_test_case($code);
     $currentFunction = null;
     /** @var array<string, true> */
@@ -375,10 +395,10 @@ function collect_snake_case_violations(
                 $underSrc,
                 $underTests,
                 $typeName,
+                $fqcn,
                 $extendsTestCase,
                 $scopedMethodAllowlist,
-                $siteMethodAllowlist,
-                $phpunitHooks
+                $siteMethodAllowlist
             )) {
                 $violations[] = sprintf('%s: repo-owned camelCase identifier %s', $filePath, $text);
             }
@@ -415,7 +435,6 @@ function collect_snake_case_violations(
 /**
  * @param array<string, true> $scopedMethodAllowlist
  * @param array<string, true> $siteMethodAllowlist
- * @param array<string, true> $phpunitHooks
  * @param array<string, list<string>> $parameterAllowlist
  * @return list<string>
  */
@@ -424,7 +443,6 @@ function collect_snake_case_violations_tree(
     string $root,
     array $scopedMethodAllowlist,
     array $siteMethodAllowlist,
-    array $phpunitHooks,
     array $parameterAllowlist
 ): array
 {
@@ -448,7 +466,6 @@ function collect_snake_case_violations_tree(
                 $root,
                 $scopedMethodAllowlist,
                 $siteMethodAllowlist,
-                $phpunitHooks,
                 $parameterAllowlist
             )
         );
@@ -457,7 +474,6 @@ function collect_snake_case_violations_tree(
     return $violations;
 }
 
-$phpunitHooks = load_phpunit_hook_allowlist($root . '/scripts/upstream-identifier-allowlist.txt');
 $scopedMethodAllowlist = build_scoped_upstream_method_allowlist($root);
 $siteMethodAllowlist = load_site_method_allowlist($root . '/scripts/upstream-method-allowlist.txt', $root);
 $parameterAllowlist = load_parameter_allowlist($root . '/scripts/upstream-parameter-allowlist.txt');
@@ -645,7 +661,6 @@ $demoSnakeViolations = collect_snake_case_violations(
     $root,
     $scopedMethodAllowlist,
     $siteMethodAllowlist,
-    $phpunitHooks,
     $parameterAllowlist
 );
 if ($demoSnakeViolations === []) {
@@ -665,7 +680,6 @@ $demoHumpViolations = collect_snake_case_violations(
     $root,
     $scopedMethodAllowlist,
     $siteMethodAllowlist,
-    $phpunitHooks,
     $parameterAllowlist
 );
 if ($demoHumpViolations === []) {
@@ -712,7 +726,6 @@ $demoTargetPathViolations = collect_snake_case_violations(
     $root,
     $scopedMethodAllowlist,
     $siteMethodAllowlist,
-    $phpunitHooks,
     $parameterAllowlist
 );
 if ($demoTargetPathViolations === []) {
@@ -729,7 +742,7 @@ if (!is_string($passTraitContents)) {
     fwrite(STDERR, "check-legacy-names: allowlist pass demo could not prepare Request_Trait::withUri.\n");
     exit(1);
 }
-if (collect_snake_case_violations($traitFile, $passTraitContents, $root, $scopedMethodAllowlist, $siteMethodAllowlist, $phpunitHooks, $parameterAllowlist) !== []) {
+if (collect_snake_case_violations($traitFile, $passTraitContents, $root, $scopedMethodAllowlist, $siteMethodAllowlist, $parameterAllowlist) !== []) {
     fwrite(STDERR, "check-legacy-names: allowlisted upstream name demo failed on its listed site.\n");
     exit(1);
 }
@@ -753,7 +766,6 @@ $demoMultipartViolations = collect_snake_case_violations(
     $root,
     $scopedMethodAllowlist,
     $siteMethodAllowlist,
-    $phpunitHooks,
     $parameterAllowlist
 );
 if ($demoMultipartViolations === []) {
@@ -761,6 +773,30 @@ if ($demoMultipartViolations === []) {
     exit(1);
 }
 fwrite(STDOUT, "check-legacy-names: scoped method demo failed for injected Message_Trait::setHeaders.\n");
+
+$demoSetUpContents = preg_replace(
+    '/private function set_headers/',
+    'public function setUp',
+    $messageTraitContents,
+    1
+);
+if (!is_string($demoSetUpContents) || $demoSetUpContents === $messageTraitContents) {
+    fwrite(STDERR, "check-legacy-names: setUp outside TestCase demo could not inject setUp on Message_Trait.\n");
+    exit(1);
+}
+$demoSetUpViolations = collect_snake_case_violations(
+    $messageTraitFile,
+    $demoSetUpContents,
+    $root,
+    $scopedMethodAllowlist,
+    $siteMethodAllowlist,
+    $parameterAllowlist
+);
+if ($demoSetUpViolations === []) {
+    fwrite(STDERR, "check-legacy-names: setUp outside TestCase demo did not fail.\n");
+    exit(1);
+}
+fwrite(STDOUT, "check-legacy-names: setUp demo failed for Message_Trait::setUp outside TestCase.\n");
 
 $responseTestFile = $root . '/tests/Response_Test.php';
 $responseTestContents = file_get_contents($responseTestFile);
@@ -784,7 +820,6 @@ $demoTestFooViolations = collect_snake_case_violations(
     $root,
     $scopedMethodAllowlist,
     $siteMethodAllowlist,
-    $phpunitHooks,
     $parameterAllowlist
 );
 if ($demoTestFooViolations === []) {
@@ -807,8 +842,8 @@ foreach ($scanPaths as $path) {
 $violations = array_merge($violations, collect_class_file_mismatches([$root . '/src', $root . '/tests']));
 $violations = array_merge(
     $violations,
-    collect_snake_case_violations_tree($root . '/src', $root, $scopedMethodAllowlist, $siteMethodAllowlist, $phpunitHooks, $parameterAllowlist),
-    collect_snake_case_violations_tree($root . '/tests', $root, $scopedMethodAllowlist, $siteMethodAllowlist, $phpunitHooks, $parameterAllowlist)
+    collect_snake_case_violations_tree($root . '/src', $root, $scopedMethodAllowlist, $siteMethodAllowlist, $parameterAllowlist),
+    collect_snake_case_violations_tree($root . '/tests', $root, $scopedMethodAllowlist, $siteMethodAllowlist, $parameterAllowlist)
 );
 
 fwrite(STDOUT, "check-legacy-names: matcher rejects Nyholm\\Psr7\\Factory\\Psr17Factory.\n");
